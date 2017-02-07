@@ -1,5 +1,5 @@
 .PHONY: test
-test: | docker submit-in-docker test-in-docker clean
+test: | docker submit-in-docker test-in-docker
 
 .PHONY: docker
 docker:
@@ -11,7 +11,7 @@ docker:
 .PHONY: submit-in-docker
 submit-in-docker:
 	docker exec -it htcondor-go-test su -l tester -c 'condor_submit hello.sub && condor_submit hello_neverrun.sub'
-	sleep 30 # let job run
+	sleep 60 # let job run
 
 .PHONY: test-in-docker
 test-in-docker:

@@ -25,6 +25,7 @@ type Command struct {
 	Name       string
 	Limit      int
 	Constraint string
+	Attributes []string
 }
 
 // NewCommand creates a new HTCondor command.
@@ -58,6 +59,17 @@ func (c *Command) WithConstraint(constraint string) *Command {
 	return c
 }
 
+// WithAttribute sets a specific attribute to return, rather than the entire
+// ClassAd. Can be called multiple times.
+func (c *Command) WithAttribute(attribute string) *Command {
+	if c.Attributes == nil {
+		c.Attributes = []string{attribute}
+	} else {
+		c.Attributes = append(c.Attributes, attribute)
+	}
+	return c
+}
+
 // Cmd generates an exec.Cmd you can use to run the command manually.
 // Use Run() to run the command and get back ClassAds.
 func (c *Command) Cmd() *exec.Cmd {
@@ -74,7 +86,12 @@ func (c *Command) Cmd() *exec.Cmd {
 	if c.Constraint != "" {
 		args = append(args, "-constraint", c.Constraint)
 	}
-	args = append(args, "-long")
+	if len(c.Attributes) > 0 {
+		args = append(args, "-af:lrng")
+		args = append(args, c.Attributes...)
+	} else {
+		args = append(args, "-long")
+	}
 	return exec.Command(c.Command, args...)
 }
 
