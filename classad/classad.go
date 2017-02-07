@@ -80,22 +80,6 @@ func ReadClassAds(r io.Reader) ([]ClassAd, error) {
 	return ads, nil
 }
 
-// ReadClassAds reads multiple classads (in "long" format) that are separated by a blank line.
-/*func ReadClassAds(r io.Reader) ([]ClassAd, error) {
-	ads := make([]ClassAd, 0)
-	for {
-		ad, err := ReadClassAd(r)
-		if err != nil {
-			return ads, err
-		}
-		if ad == nil {
-			break
-		}
-		ads = append(ads, ad)
-	}
-	return ads, nil
-}*/
-
 // Strings returns a map of the string representation for all the attributes in the ClassAd.
 func (c ClassAd) Strings() map[string]string {
 	ad := make(map[string]string, len(c))

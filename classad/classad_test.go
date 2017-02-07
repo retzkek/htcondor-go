@@ -6,7 +6,7 @@ import (
 )
 
 func TestReadClassAd_bad(t *testing.T) {
-	for _, s := range bad_classads {
+	for _, s := range badClassads {
 		_, err := ReadClassAds(strings.NewReader(s))
 		if err == nil {
 			t.Errorf("expected error. ClassAd:\n%s", s)
@@ -19,22 +19,22 @@ func TestReadClassAd_good(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != classads_len {
-		t.Errorf("expected %d classads, read %d", classads_len, len(ads))
+	if len(ads) != classadsLen {
+		t.Errorf("expected %d classads, read %d", classadsLen, len(ads))
 	}
 	for _, ad := range ads {
 		t.Log(ad.Strings())
 	}
 }
 
-var bad_classads = []string{
+var badClassads = []string{
 	`foo
 bar`,
 	`foo = bar
 baz`,
 }
 
-var classads_len = 2
+var classadsLen = 2
 var classads = `
 Requirements = ( ( ( Arch == "X86_64" ) || ( Arch == "INTEL" ) ) && ( target.IS_Glidein == true ) && ( DesiredOS =?= NULL || stringlistimember(Target.IFOS_installed,DesiredOS) ) ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
 ClusterId = 14158503
