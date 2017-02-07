@@ -20,12 +20,21 @@ import (
 //    Constraint: "Owner == \"Me\"",
 // }
 type Command struct {
-	Command    string
-	Pool       string
-	Name       string
-	Limit      int
+	// Command is HTCondor command to run.
+	Command string
+	// Pool is HTCondor pool (collector) to query.
+	Pool string
+	// Name is the -name argument.
+	Name string
+	// Limit is the -limit argument.
+	Limit int
+	// Constraint sets the -constraint argument.
 	Constraint string
+	// Attributes is a list of specific attributes to return.
+	// If Attributes is empty, all attributes are returned.
 	Attributes []string
+	// Args is a list of any extra arguments to pass.
+	Args []string
 }
 
 // NewCommand creates a new HTCondor command.
@@ -70,6 +79,16 @@ func (c *Command) WithAttribute(attribute string) *Command {
 	return c
 }
 
+// WithArg adds an extra argument to pass. Can be called multiple times.
+func (c *Command) WithArg(arg string) *Command {
+	if c.Args == nil {
+		c.Args = []string{arg}
+	} else {
+		c.Args = append(c.Args, arg)
+	}
+	return c
+}
+
 // Cmd generates an exec.Cmd you can use to run the command manually.
 // Use Run() to run the command and get back ClassAds.
 func (c *Command) Cmd() *exec.Cmd {
@@ -85,6 +104,9 @@ func (c *Command) Cmd() *exec.Cmd {
 	}
 	if c.Constraint != "" {
 		args = append(args, "-constraint", c.Constraint)
+	}
+	if len(c.Args) > 0 {
+		args = append(args, c.Args...)
 	}
 	if len(c.Attributes) > 0 {
 		args = append(args, "-af:lrng")

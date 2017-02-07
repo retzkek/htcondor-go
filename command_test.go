@@ -13,6 +13,17 @@ func TestCondorStatus(t *testing.T) {
 	t.Log(ads)
 }
 
+func TestCondorStatusSchedd(t *testing.T) {
+	ads, err := NewCommand("condor_status").WithArg("-schedd").WithAttribute("name").Run()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(ads) != 1 {
+		t.Errorf("expected one ClassAds, got %d", len(ads))
+	}
+	t.Log(ads)
+}
+
 func TestCondorQ(t *testing.T) {
 	ads, err := NewCommand("condor_q").Run()
 	if err != nil {
