@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -23,6 +24,29 @@ const (
 type Attribute struct {
 	Type  AttributeType
 	Value interface{}
+}
+
+func AttributeFromString(val string) Attribute {
+	val = strings.Trim(val, " ")
+	if len(val) == 0 {
+		return Attribute{Type: Error}
+	}
+	if val[0] != '"' {
+		// not a string, see if it's an integer
+		ival, err := strconv.Atoi(val)
+		if err == nil {
+			return Attribute{Type: Integer, Value: ival}
+		}
+		// how about a real
+		fval, err := strconv.ParseFloat(val, 64)
+		if err == nil {
+			return Attribute{Type: Real, Value: fval}
+		}
+	}
+	return Attribute{
+		Type:  String,
+		Value: strings.Trim(val, "\""),
+	}
 }
 
 // String returns the string representation of the ClassAd attribute.
@@ -45,9 +69,9 @@ func (a Attribute) String() string {
 // ClassAd represents an HTCondor ClassAd (see http://research.cs.wisc.edu/htcondor/manual/current/4_1HTCondor_s_ClassAd.html).
 type ClassAd map[string]Attribute
 
-// ReadClassAds reads multiple ClassAds (in "long" format) from r until EOF or a blank line.
+// ReadClassAds reads multiple ClassAds (in "long" format) from r until EOF.
 // ClassAds should be separated by a blank line.
-// All attributes are returned as strings (for now).
+// Numeric attributes are returned as such, but expressions are not evaluated and are returned as strings.
 func ReadClassAds(r io.Reader) ([]ClassAd, error) {
 	scanner := bufio.NewScanner(r)
 	ads := make([]ClassAd, 0)
@@ -65,11 +89,8 @@ func ReadClassAds(r io.Reader) ([]ClassAd, error) {
 		if len(parts) < 2 {
 			return nil, fmt.Errorf("invalid classad attribute: \"%s\"", scanner.Text())
 		}
-		ad[strings.Trim(parts[0], " \"")] = Attribute{
-			Type:  String,
-			Value: strings.Trim(parts[1], " \""),
-		}
-
+		key := strings.Trim(parts[0], " \"")
+		ad[key] = AttributeFromString(parts[1])
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
