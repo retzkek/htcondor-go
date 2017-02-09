@@ -33,7 +33,7 @@ func AttributeFromString(val string) Attribute {
 	}
 	if val[0] != '"' {
 		// not a string, see if it's an integer
-		ival, err := strconv.Atoi(val)
+		ival, err := strconv.ParseInt(val, 10, 64)
 		if err == nil {
 			return Attribute{Type: Integer, Value: ival}
 		}
