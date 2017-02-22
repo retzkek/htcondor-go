@@ -89,9 +89,8 @@ func (c *Command) WithArg(arg string) *Command {
 	return c
 }
 
-// Cmd generates an exec.Cmd you can use to run the command manually.
-// Use Run() to run the command and get back ClassAds.
-func (c *Command) Cmd() *exec.Cmd {
+// MakeArgs builds the complete argument list to be passed to the command.
+func (c *Command) MakeArgs() []string {
 	args := make([]string, 0)
 	if c.Pool != "" {
 		args = append(args, "-pool", c.Pool)
@@ -114,7 +113,13 @@ func (c *Command) Cmd() *exec.Cmd {
 	} else {
 		args = append(args, "-long")
 	}
-	return exec.Command(c.Command, args...)
+	return args
+}
+
+// Cmd generates an exec.Cmd you can use to run the command manually.
+// Use Run() to run the command and get back ClassAds.
+func (c *Command) Cmd() *exec.Cmd {
+	return exec.Command(c.Command, c.MakeArgs()...)
 }
 
 // Run runs the command and returns the ClassAds.
