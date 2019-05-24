@@ -11,7 +11,7 @@ DISCARD_SESSION_KEYRING_ON_STARTUP = False
 # I give up.  This is easier.
 LOCK = $(LOCAL_DIR)/lock_condor
 
-CONDOR_ADMIN=apohl@morgridge.org
+CONDOR_ADMIN=kretzke@fnal.gov
 
 # I wonder if this setting is really required.  The RPM page said it is.
 MAIL=/usr/bin/mail

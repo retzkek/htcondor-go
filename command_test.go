@@ -1,6 +1,10 @@
 package htcondor
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/retzkek/htcondor-go/classad"
+)
 
 func TestCondorStatus(t *testing.T) {
 	ads, err := NewCommand("condor_status").Run()
@@ -11,6 +15,36 @@ func TestCondorStatus(t *testing.T) {
 		t.Errorf("expected two ClassAds, got %d", len(ads))
 	}
 	t.Log(ads)
+}
+
+func TestCondorStatusStream(t *testing.T) {
+	ads := make(chan classad.ClassAd)
+	errors := make(chan error)
+	NewCommand("condor_status").Stream(ads, errors)
+	n := 0
+	for {
+		select {
+		case ad, ok := <-ads:
+			if ok {
+				t.Log(ad)
+				n++
+			} else {
+				ads = nil
+			}
+		case err, ok := <-errors:
+			if ok {
+				t.Error(err)
+			} else {
+				errors = nil
+			}
+		}
+		if ads == nil && errors == nil {
+			break
+		}
+	}
+	if n != 2 {
+		t.Errorf("expected two ClassAds, got %d", n)
+	}
 }
 
 func TestCondorStatusSchedd(t *testing.T) {
