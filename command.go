@@ -161,6 +161,6 @@ func (c *Command) Stream(ch chan classad.ClassAd, errors chan error) {
 		close(ch)
 		return
 	}
-	go classad.StreamClassAds(out, ch, errors)
+	classad.StreamClassAds(out, ch, errors)
 	cmd.Wait()
 }
