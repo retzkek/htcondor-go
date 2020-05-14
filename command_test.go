@@ -41,8 +41,8 @@ func TestCondorStatus(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != 1 {
-		t.Errorf("expected one ClassAd, got %d", len(ads))
+	if len(ads) != 2 {
+		t.Errorf("expected two ClassAds, got %d", len(ads))
 	}
 	t.Log(ads)
 }
@@ -53,8 +53,8 @@ func TestCondorStatusStream(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != 1 {
-		t.Errorf("expected one ClassAd, got %d", len(ads))
+	if len(ads) != 2 {
+		t.Errorf("expected two ClassAds, got %d", len(ads))
 	}
 	t.Log(ads)
 }
@@ -65,7 +65,7 @@ func TestCondorStatusSchedd(t *testing.T) {
 		t.Error(err)
 	}
 	if len(ads) != 1 {
-		t.Errorf("expected one ClassAds, got %d", len(ads))
+		t.Errorf("expected one ClassAd, got %d", len(ads))
 	}
 	t.Log(ads)
 }
@@ -77,7 +77,7 @@ func TestCondorStatusScheddStream(t *testing.T) {
 		t.Error(err)
 	}
 	if len(ads) != 1 {
-		t.Errorf("expected one ClassAds, got %d", len(ads))
+		t.Errorf("expected one ClassAd, got %d", len(ads))
 	}
 	t.Log(ads)
 }
@@ -110,7 +110,7 @@ func TestCondorHistory(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != 2 {
+	if len(ads) != 1 {
 		t.Errorf("expected one ClassAd, got %d", len(ads))
 	}
 	t.Log(ads)
@@ -121,7 +121,7 @@ func TestCondorHistoryStream(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != 2 {
+	if len(ads) != 1 {
 		t.Errorf("expected one ClassAd, got %d", len(ads))
 	}
 	t.Log(ads)
@@ -143,8 +143,8 @@ func TestCondorHistoryAttribute(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != 2 {
-		t.Errorf("expected one ClassAds, got %d", len(ads))
+	if len(ads) != 1 {
+		t.Errorf("expected one ClassAd, got %d", len(ads))
 	}
 	t.Log(ads)
 }
