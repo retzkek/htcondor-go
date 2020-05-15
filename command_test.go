@@ -3,8 +3,17 @@ package htcondor
 import (
 	"testing"
 
+	"github.com/golang/groupcache"
 	"github.com/retzkek/htcondor-go/classad"
 )
+
+var (
+	cache *groupcache.HTTPPool
+)
+
+func init() {
+	cache = groupcache.NewHTTPPool("http://localhost:8080")
+}
 
 func stream(cmd *Command) ([]classad.ClassAd, error) {
 	adch := make(chan classad.ClassAd)
@@ -55,6 +64,51 @@ func TestCondorStatusStream(t *testing.T) {
 	}
 	if len(ads) != 2 {
 		t.Errorf("expected two ClassAds, got %d", len(ads))
+	}
+	t.Log(ads)
+}
+
+func TestCondorStatusCache(t *testing.T) {
+	cmd := NewCommand("condor_status").WithCache(cache, "status", 64<<20)
+	ads, err := cmd.Run()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(ads) != 2 {
+		t.Errorf("expected two ClassAds, got %d", len(ads))
+	}
+	// second time, should hit cache
+	ads, err = cmd.Run()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(ads) != 2 {
+		t.Errorf("expected two ClassAds, got %d", len(ads))
+	}
+	stats := groupcache.GetGroup("status").CacheStats(groupcache.MainCache)
+	if stats.Hits != 1 {
+		t.Errorf("expected one cache hit, got %d", stats.Hits)
+	}
+	t.Log(ads)
+}
+
+func TestCondorStatusCacheStream(t *testing.T) {
+	cmd := NewCommand("condor_status").WithCache(cache, "status_stream", 64<<20)
+	ads, err := stream(cmd)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(ads) != 2 {
+		t.Errorf("expected two ClassAds, got %d", len(ads))
+	}
+	// second time, should hit cache
+	ads, err = stream(cmd)
+	if err != nil {
+		t.Error(err)
+	}
+	stats := groupcache.GetGroup("status").CacheStats(groupcache.MainCache)
+	if stats.Hits != 1 {
+		t.Errorf("expected one cache hit, got %d", stats.Hits)
 	}
 	t.Log(ads)
 }
