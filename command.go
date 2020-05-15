@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/golang/groupcache"
 	"github.com/prometheus/client_golang/prometheus"
@@ -55,8 +56,9 @@ type Command struct {
 	Args []string
 	// cache is an optional groupcache pool to cache
 	// queries. Inititalize with WithCache().
-	cache      *groupcache.HTTPPool
-	cacheGroup string
+	cache         *groupcache.HTTPPool
+	cacheGroup    string
+	cacheLifetime time.Duration
 }
 
 // NewCommand creates a new HTCondor command.
@@ -66,11 +68,15 @@ func NewCommand(command string) *Command {
 	}
 }
 
-// WithCache initializes a groupcache group for the client.
-func (c *Command) WithCache(pool *groupcache.HTTPPool, group string, cacheBytes int64) *Command {
+// WithCache initializes a groupcache group for the client. Set cacheLifetime to
+// 0 to *never* expire cached queries (unless they are LRU evicted).
+func (c *Command) WithCache(pool *groupcache.HTTPPool, group string, cacheBytes int64, cacheLifetime time.Duration) *Command {
 	c.cache = pool
 	c.cacheGroup = group
-	groupcache.NewGroup(c.cacheGroup, cacheBytes, c.commandGetter())
+	c.cacheLifetime = cacheLifetime
+	if groupcache.GetGroup(group) == nil {
+		groupcache.NewGroup(c.cacheGroup, cacheBytes, commandGetter())
+	}
 	return c
 }
 
@@ -154,30 +160,44 @@ func (c *Command) Cmd() *exec.Cmd {
 
 // encodeKey encodes the command into a string, to be used as a cache key.
 func (c *Command) encodeKey() string {
-	return c.Command + keySeparator + strings.Join(c.MakeArgs(), keySeparator)
+	timeKey := "0"
+	if c.cacheLifetime > 0 {
+		timeKey = time.Now().Truncate(c.cacheLifetime).Format(time.RFC3339)
+	}
+	return timeKey + keySeparator +
+		c.Command + keySeparator +
+		strings.Join(c.MakeArgs(), keySeparator)
 }
 
 // decodeKey decodes the command from a key string. It does not restore the
 // original Command, instead putting all the arguments into Args.
-func decodeKey(key string) *Command {
+func decodeKey(key string) (*Command, error) {
 	parts := strings.Split(key, keySeparator)
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("unable to decode cache key: %s", key)
+	}
+	// first field is time key, we don't need it
 	c := Command{
-		Command: parts[0],
+		Command: parts[1],
 	}
-	if len(parts) > 1 {
-		c.Args = parts[1:]
+	if len(parts) > 2 {
+		c.Args = parts[2:]
 	}
-	return &c
+	return &c, nil
 }
 
 // commandGetter returns a groupCache.GetterFunc that queries HTCondor with the
 // configured command, and stores the raw response in dest.
-func (c *Command) commandGetter() groupcache.GetterFunc {
+func commandGetter() groupcache.GetterFunc {
 	return func(ctx context.Context, key string, dest groupcache.Sink) error {
 		timer := prometheus.NewTimer(commandDuration)
 		defer timer.ObserveDuration()
 
-		cmd := decodeKey(key).Cmd()
+		c, err := decodeKey(key)
+		if err != nil {
+			return err
+		}
+		cmd := c.Cmd()
 		out, err := cmd.StdoutPipe()
 		if err != nil {
 			return err
@@ -207,7 +227,7 @@ func (c *Command) Run() ([]classad.ClassAd, error) {
 		err = group.Get(nil, key, groupcache.ByteViewSink(&resp))
 	} else {
 		// call the getter directly
-		err = c.commandGetter()(nil, key, groupcache.ByteViewSink(&resp))
+		err = commandGetter()(nil, key, groupcache.ByteViewSink(&resp))
 	}
 	if err != nil {
 		return nil, err

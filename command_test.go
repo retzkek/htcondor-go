@@ -69,7 +69,7 @@ func TestCondorStatusStream(t *testing.T) {
 }
 
 func TestCondorStatusCache(t *testing.T) {
-	cmd := NewCommand("condor_status").WithCache(cache, "status", 64<<20)
+	cmd := NewCommand("condor_status").WithCache(cache, "status", 64<<20, 0)
 	ads, err := cmd.Run()
 	if err != nil {
 		t.Error(err)
@@ -93,7 +93,7 @@ func TestCondorStatusCache(t *testing.T) {
 }
 
 func TestCondorStatusCacheStream(t *testing.T) {
-	cmd := NewCommand("condor_status").WithCache(cache, "status_stream", 64<<20)
+	cmd := NewCommand("condor_status").WithCache(cache, "status_stream", 64<<20, 0)
 	ads, err := stream(cmd)
 	if err != nil {
 		t.Error(err)
