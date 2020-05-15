@@ -13,11 +13,11 @@ wait-for-condor:
 
 .PHONY: submit-in-docker
 submit-in-docker:
-	docker exec -it htcondor-go-test su -l tester -c 'condor_submit hello.sub && condor_submit hello_neverrun.sub'
+	docker exec htcondor-go-test su -l tester -c 'condor_submit hello.sub && condor_submit hello_neverrun.sub'
 
 .PHONY: test-in-docker
 test-in-docker:
-	docker exec -it htcondor-go-test go test
+	docker exec htcondor-go-test go test
 
 .PHONY: wait-for-jobs
 wait-for-jobs:
