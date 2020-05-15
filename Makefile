@@ -9,7 +9,7 @@ docker:
 
 .PHONY: wait-for-condor
 wait-for-condor:
-	sleep 5
+	sleep 10
 
 .PHONY: submit-in-docker
 submit-in-docker:
@@ -17,7 +17,7 @@ submit-in-docker:
 
 .PHONY: test-in-docker
 test-in-docker:
-	docker exec -it htcondor-go-test go test -v
+	docker exec -it htcondor-go-test go test
 
 .PHONY: wait-for-jobs
 wait-for-jobs:
