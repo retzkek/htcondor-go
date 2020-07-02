@@ -1,6 +1,7 @@
 package classad
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -91,6 +92,44 @@ func TestStreamClassAds_good(t *testing.T) {
 	}
 	if n != classadsLen {
 		t.Errorf("expected %d classads, read %d", classadsLen, n)
+	}
+}
+
+func TestMarshalJSON(t *testing.T) {
+	c := `Foo = "foo"
+Bar = Foo
+Baz = 1
+Qux = 2.0`
+	ads, err := ReadClassAds(strings.NewReader(c))
+	if err != nil {
+		t.Error(err)
+	}
+	if len(ads) != 1 {
+		t.Errorf("expected %d classads, read %d", 1, len(ads))
+	}
+	b, err := json.Marshal(ads[0])
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(string(b))
+	type ct struct {
+		Foo string
+		Bar string
+		Baz int
+		Qux float64
+	}
+	var c2 ct
+	if err = json.Unmarshal(b, &c2); err != nil {
+		t.Error(err)
+	}
+	ce := ct{
+		Foo: "foo",
+		Bar: "Foo",
+		Baz: 1,
+		Qux: 2.0,
+	}
+	if c2 != ce {
+		t.Errorf("expected %v, got %v", ce, c2)
 	}
 }
 
