@@ -69,6 +69,30 @@ func NewCommand(command string) *Command {
 	}
 }
 
+// Copy returns a new copy of the command, useful for adding further arguments
+// without changing the base command. The commands share the cache.
+func (c *Command) Copy() *Command {
+	cc := Command{
+		Command:       c.Command,
+		Pool:          c.Pool,
+		Name:          c.Name,
+		Limit:         c.Limit,
+		Constraint:    c.Constraint,
+		Attributes:    make([]string, len(c.Attributes)),
+		Args:          make([]string, len(c.Args)),
+		cache:         c.cache,
+		cacheGroup:    c.cacheGroup,
+		cacheLifetime: c.cacheLifetime,
+	}
+	if len(c.Attributes) > 0 {
+		copy(cc.Attributes, c.Attributes)
+	}
+	if len(c.Args) > 0 {
+		copy(cc.Args, c.Args)
+	}
+	return &cc
+}
+
 // WithCache initializes a groupcache group for the client. Set cacheLifetime to
 // 0 to *never* expire cached queries (unless they are LRU evicted).
 func (c *Command) WithCache(pool *groupcache.HTTPPool, group string, cacheBytes int64, cacheLifetime time.Duration) *Command {
