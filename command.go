@@ -14,11 +14,19 @@ import (
 )
 
 var (
-	commandDuration = prometheus.NewHistogram(
+	// CommandDuration is a prometheus histogram metric that records the
+	// duration to run each command. It is up to the client to register this
+	// metric with the prometheus client, e.g.
+	//
+	//    func init() {
+	//        prometheus.MustRegister(htcondor.CommandDuration)
+	//    }
+	CommandDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name: "htcondor_client_command_duration_seconds",
 			Help: "Histogram of command runtimes.",
 		},
+		[]string{"command"},
 	)
 )
 
@@ -225,13 +233,13 @@ func decodeKey(key string) (*Command, error) {
 // configured command, and stores the raw response in dest.
 func commandGetter() groupcache.GetterFunc {
 	return func(ctx context.Context, key string, dest groupcache.Sink) error {
-		timer := prometheus.NewTimer(commandDuration)
-		defer timer.ObserveDuration()
-
 		c, err := decodeKey(key)
 		if err != nil {
 			return err
 		}
+		timer := prometheus.NewTimer(CommandDuration.WithLabelValues(c.Command))
+		defer timer.ObserveDuration()
+
 		cmd := c.Cmd()
 		out, err := cmd.StdoutPipe()
 		if err != nil {
