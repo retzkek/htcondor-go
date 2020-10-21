@@ -16,6 +16,10 @@ github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
+# github.com/opentracing/opentracing-go v1.2.0
+## explicit
+github.com/opentracing/opentracing-go
+github.com/opentracing/opentracing-go/log
 # github.com/prometheus/client_golang v1.1.0
 ## explicit
 github.com/prometheus/client_golang/prometheus
