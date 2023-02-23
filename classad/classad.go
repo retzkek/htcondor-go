@@ -173,7 +173,7 @@ func (c ClassAd) MarshalJSON() ([]byte, error) {
 		case Integer, Real:
 			fmt.Fprintf(&b, "%s", v.String())
 		default:
-			fmt.Fprintf(&b, "\"%s\"", v.String())
+			fmt.Fprintf(&b, "\"%s\"", strings.ReplaceAll(v.String(), "\"", "\\\""))
 		}
 	}
 	fmt.Fprintf(&b, "}")

@@ -97,7 +97,8 @@ func TestStreamClassAds_good(t *testing.T) {
 
 func TestMarshalJSON(t *testing.T) {
 	c := `Foo = "foo"
-Bar = Foo
+Foo2 = Foo
+Bar = ifThenElse(Foo,"Foo","Bar")
 Baz = 1
 Qux = 2.0`
 	ads, err := ReadClassAds(strings.NewReader(c))
@@ -113,20 +114,22 @@ Qux = 2.0`
 	}
 	t.Log(string(b))
 	type ct struct {
-		Foo string
-		Bar string
-		Baz int
-		Qux float64
+		Foo  string
+		Foo2 string
+		Bar  string
+		Baz  int
+		Qux  float64
 	}
 	var c2 ct
 	if err = json.Unmarshal(b, &c2); err != nil {
 		t.Error(err)
 	}
 	ce := ct{
-		Foo: "foo",
-		Bar: "Foo",
-		Baz: 1,
-		Qux: 2.0,
+		Foo:  "foo",
+		Foo2: "Foo",
+		Bar:  "ifThenElse(Foo,\"Foo\",\"Bar\")",
+		Baz:  1,
+		Qux:  2.0,
 	}
 	if c2 != ce {
 		t.Errorf("expected %v, got %v", ce, c2)
