@@ -98,7 +98,7 @@ func TestStreamClassAds_good(t *testing.T) {
 func TestMarshalJSON(t *testing.T) {
 	c := `Foo = "foo"
 Foo2 = Foo
-Bar = ifThenElse(Foo,"Foo","Bar")
+Bar = ifThenElse(Foo,"\"Foo\"","Bar")
 Baz = 1
 Qux = 2.0`
 	ads, err := ReadClassAds(strings.NewReader(c))
@@ -127,7 +127,7 @@ Qux = 2.0`
 	ce := ct{
 		Foo:  "foo",
 		Foo2: "Foo",
-		Bar:  "ifThenElse(Foo,\"Foo\",\"Bar\")",
+		Bar:  "ifThenElse(Foo,\"\\\"Foo\\\"\",\"Bar\")",
 		Baz:  1,
 		Qux:  2.0,
 	}

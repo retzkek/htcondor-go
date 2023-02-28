@@ -2,7 +2,7 @@ package classad
 
 import (
 	"bufio"
-	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
@@ -70,6 +70,11 @@ func (a Attribute) String() string {
 		return "ERROR"
 	}
 	return "TYPEERROR"
+}
+
+// MarshalJSON returns the attribute as a JSON value.
+func (a Attribute) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.Value)
 }
 
 // ClassAd represents an HTCondor ClassAd (see http://research.cs.wisc.edu/htcondor/manual/current/4_1HTCondor_s_ClassAd.html).
@@ -155,27 +160,4 @@ func (c ClassAd) Strings() map[string]string {
 		ad[k] = v.String()
 	}
 	return ad
-}
-
-// MarshalJSON returns the ClassAd as a JSON document.
-func (c ClassAd) MarshalJSON() ([]byte, error) {
-	var b bytes.Buffer
-	fmt.Fprintf(&b, "{")
-	first := true
-	for k, v := range c {
-		if first {
-			first = false
-		} else {
-			fmt.Fprintf(&b, ",")
-		}
-		fmt.Fprintf(&b, "\"%s\":", k)
-		switch v.Type {
-		case Integer, Real:
-			fmt.Fprintf(&b, "%s", v.String())
-		default:
-			fmt.Fprintf(&b, "\"%s\"", strings.ReplaceAll(v.String(), "\"", "\\\""))
-		}
-	}
-	fmt.Fprintf(&b, "}")
-	return b.Bytes(), nil
 }
