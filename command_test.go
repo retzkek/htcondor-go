@@ -50,8 +50,8 @@ func TestCondorStatus(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != 2 {
-		t.Errorf("expected two ClassAds, got %d", len(ads))
+	if len(ads) != 1 {
+		t.Errorf("condor_status expected one ClassAd, got %d", len(ads))
 	}
 	t.Log(ads)
 }
@@ -62,8 +62,8 @@ func TestCondorStatusStream(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != 2 {
-		t.Errorf("expected two ClassAds, got %d", len(ads))
+	if len(ads) != 1 {
+		t.Errorf("condor_status expected one ClassAd, got %d", len(ads))
 	}
 	t.Log(ads)
 }
@@ -74,16 +74,16 @@ func TestCondorStatusCache(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != 2 {
-		t.Errorf("expected two ClassAds, got %d", len(ads))
+	if len(ads) != 1 {
+		t.Errorf("condor_status expected one ClassAd, got %d", len(ads))
 	}
 	// second time, should hit cache
 	ads, err = cmd.Run()
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != 2 {
-		t.Errorf("expected two ClassAds, got %d", len(ads))
+	if len(ads) != 1 {
+		t.Errorf("condor_status expected one ClassAd, got %d", len(ads))
 	}
 	stats := groupcache.GetGroup("status").CacheStats(groupcache.MainCache)
 	if stats.Hits != 1 {
@@ -98,8 +98,8 @@ func TestCondorStatusCacheStream(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ads) != 2 {
-		t.Errorf("expected two ClassAds, got %d", len(ads))
+	if len(ads) != 1 {
+		t.Errorf("condor_status expected one ClassAd, got %d", len(ads))
 	}
 	// second time, should hit cache
 	ads, err = stream(cmd)

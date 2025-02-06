@@ -3,14 +3,18 @@ package htcondor
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"github.com/golang/groupcache"
+	"io"
 	"os/exec"
 	"strings"
 	"time"
 
-	"github.com/golang/groupcache"
-	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/retzkek/htcondor-go/classad"
 )
 
@@ -29,6 +33,7 @@ var (
 		},
 		[]string{"command"},
 	)
+	tracer = otel.Tracer("htcondor")
 )
 
 const (
@@ -39,15 +44,17 @@ const (
 // Command represents an HTCondor command-line tool, e.g. condor_q.
 //
 // It implements a builder pattern, so you can call e.g.
-//     NewCommand("condor_q").WithPool("mypool:9618").WithName("myschedd").WithConstraint("Owner == \"Me\"")
+//
+//	NewCommand("condor_q").WithPool("mypool:9618").WithName("myschedd").WithConstraint("Owner == \"Me\"")
 //
 // You can also build it directly, e.g.
-// c := Command{
-//    Command: "condor_q",
-//    Pool: "mypool:9618",
-//    Name: "myschedd",
-//    Constraint: "Owner == \"Me\"",
-// }
+//
+//	c := Command{
+//	   Command: "condor_q",
+//	   Pool: "mypool:9618",
+//	   Name: "myschedd",
+//	   Constraint: "Owner == \"Me\"",
+//	}
 type Command struct {
 	// Command is HTCondor command to run.
 	Command string
@@ -240,14 +247,14 @@ func decodeKey(key string) (*Command, error) {
 // configured command, and stores the raw response in dest.
 func commandGetter() groupcache.GetterFunc {
 	return func(ctx context.Context, key string, dest groupcache.Sink) error {
-		span, ctx := opentracing.StartSpanFromContext(ctx, "Getter")
-		defer span.Finish()
-		span.SetTag("key", key)
+		ctx, span := tracer.Start(ctx, "Getter")
+		defer span.End()
+		span.SetAttributes(attribute.String("key", key))
 
 		c, err := decodeKey(key)
 		if err != nil {
-			span.SetTag("error", true)
-			span.LogKV("error", fmt.Sprintf("error decoding key: %s", err.Error()))
+			err := fmt.Errorf("error decoding key: %w", err)
+			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
 		c.addTracingTags(span)
@@ -257,36 +264,39 @@ func commandGetter() groupcache.GetterFunc {
 		cmd := c.CmdContext(ctx)
 		out, err := cmd.StdoutPipe()
 		if err != nil {
-			span.SetTag("error", true)
-			span.LogKV("error", fmt.Sprintf("error creating stdout pipe: %s", err.Error()))
+			err := fmt.Errorf("error creating stdout pipe: %w", err)
+			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
 		stderr, err := cmd.StderrPipe()
 		if err != nil {
-			span.SetTag("error", true)
-			span.LogKV("error", fmt.Sprintf("error creating stderr pipe: %s", err.Error()))
+			err := fmt.Errorf("error creating stderr pipe: %w", err)
+			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
 		if err := cmd.Start(); err != nil {
-			span.SetTag("error", true)
-			span.LogKV("error", fmt.Sprintf("error creating command: %s", err.Error()))
+			err := fmt.Errorf("error creating command: %w", err)
+			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
-		resp, err := ioutil.ReadAll(out)
+		resp, err := io.ReadAll(out)
 		if err != nil {
-			span.SetTag("error", true)
-			span.LogKV("error", fmt.Sprintf("error reading stdout: %s", err.Error()))
+			err := fmt.Errorf("error reading stdout: %w", err)
+			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
-		rerr, err := ioutil.ReadAll(stderr)
+		rerr, err := io.ReadAll(stderr)
 		if err != nil {
-			span.SetTag("error", true)
-			span.LogKV("error", fmt.Sprintf("error reading stderr: %s", err.Error()))
+			err := fmt.Errorf("error reading stderr: %w", err)
+			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
 		if err := cmd.Wait(); err != nil {
-			span.SetTag("error", true)
-			span.LogKV("error", err.Error(), "stdout", string(resp), "stderr", string(rerr))
+			span.SetStatus(codes.Error, err.Error())
+			span.SetAttributes(
+				attribute.String("stdout", string(resp)),
+				attribute.String("stderr", string(rerr)),
+			)
 			return err
 		}
 		return dest.SetBytes(resp)
@@ -302,8 +312,8 @@ func (c *Command) Run() ([]classad.ClassAd, error) {
 // RunWithContext runs the command with the given context and returns the ClassAds. Use
 // Cmd() if you need more control over the handling of the output.
 func (c *Command) RunWithContext(ctx context.Context) ([]classad.ClassAd, error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "Run")
-	defer span.Finish()
+	ctx, span := tracer.Start(ctx, "Run")
+	defer span.End()
 	c.addTracingTags(span)
 
 	key := c.encodeKey()
@@ -317,12 +327,12 @@ func (c *Command) RunWithContext(ctx context.Context) ([]classad.ClassAd, error)
 		err = commandGetter()(ctx, key, groupcache.ByteViewSink(&resp))
 	}
 	if err != nil {
-		span.SetTag("error", true)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 	ads, err := classad.ReadClassAds(resp.Reader())
 	if err != nil {
-		span.SetTag("error", true)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 	return ads, nil
@@ -346,8 +356,8 @@ func (c *Command) Stream(ch chan classad.ClassAd, errors chan error) {
 // advantages of streaming, since the entire HTCondor response must be read,
 // whether from HTCondor or from the cache, before the classads can be sent.
 func (c *Command) StreamWithContext(ctx context.Context, ch chan classad.ClassAd, errors chan error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "Stream")
-	defer span.Finish()
+	ctx, span := tracer.Start(ctx, "Stream")
+	defer span.End()
 	c.addTracingTags(span)
 
 	if c.cache != nil {
@@ -357,9 +367,8 @@ func (c *Command) StreamWithContext(ctx context.Context, ch chan classad.ClassAd
 		group := groupcache.GetGroup(c.cacheGroup)
 		err = group.Get(ctx, key, groupcache.ByteViewSink(&resp))
 		if err != nil {
-			span.SetTag("error", true)
-			err = fmt.Errorf("error getting response from cache: %s", err)
-			span.LogKV("error", err.Error())
+			err = fmt.Errorf("error getting response from cache: %w", err)
+			span.SetStatus(codes.Error, err.Error())
 			errors <- err
 			close(errors)
 			close(ch)
@@ -370,18 +379,16 @@ func (c *Command) StreamWithContext(ctx context.Context, ch chan classad.ClassAd
 		cmd := c.CmdContext(ctx)
 		out, err := cmd.StdoutPipe()
 		if err != nil {
-			span.SetTag("error", true)
-			err = fmt.Errorf("error opening command pipe: %s", err)
-			span.LogKV("error", err.Error())
+			err = fmt.Errorf("error opening command pipe: %w", err)
+			span.SetStatus(codes.Error, err.Error())
 			errors <- err
 			close(errors)
 			close(ch)
 			return
 		}
 		if err := cmd.Start(); err != nil {
-			span.SetTag("error", true)
-			err = fmt.Errorf("error running command: %s", err)
-			span.LogKV("error", err.Error())
+			err = fmt.Errorf("error running command: %w", err)
+			span.SetStatus(codes.Error, err.Error())
 			errors <- err
 			close(errors)
 			close(ch)
@@ -392,9 +399,9 @@ func (c *Command) StreamWithContext(ctx context.Context, ch chan classad.ClassAd
 	}
 }
 
-func (c *Command) addTracingTags(span opentracing.Span) {
-	span.SetTag("component", "htcondor")
-	span.SetTag("db.type", "htcondor")
-	span.SetTag("db.instance", c.Pool)
-	span.SetTag("db.statement", c.Command+" "+strings.Join(c.MakeArgs(), " "))
+func (c *Command) addTracingTags(span trace.Span) {
+	span.SetAttributes(attribute.String("component", "htcondor"))
+	span.SetAttributes(attribute.String("db.type", "htcondor"))
+	span.SetAttributes(attribute.String("db.instance", c.Pool))
+	span.SetAttributes(attribute.String("db.statement", c.Command+" "+strings.Join(c.MakeArgs(), " ")))
 }
