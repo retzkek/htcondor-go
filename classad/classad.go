@@ -115,6 +115,8 @@ func ReadClassAds(r io.Reader) ([]ClassAd, error) {
 }
 
 // MapStringStringToClassAd converts a map[string]string to a ClassAd.
+// It will attempt to convert values to numeric Types when appropriate. For example, a string value of "42"
+// will be converted to Attribute{Type: Integer, Value: 42}
 func MapStringStringToClassAd(m map[string]string) ClassAd {
 	ad := make(ClassAd)
 	for k, v := range m {
