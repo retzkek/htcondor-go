@@ -2,6 +2,7 @@ package classad
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -25,6 +26,52 @@ func TestReadClassAd_good(t *testing.T) {
 	}
 	for _, ad := range ads {
 		t.Log(ad.Strings())
+	}
+}
+
+func TestMapStringStringToClassAd(t *testing.T) {
+	type testCase struct {
+		description string
+		m           map[string]string
+		expected    ClassAd
+	}
+
+	testCases := []testCase{
+		{
+			"Good case",
+			map[string]string{
+				"Attr1": "Value1",
+				"Attr2": "2",
+				"Attr3": "3.4",
+			},
+			ClassAd{
+				"Attr1": Attribute{
+					Type:  String,
+					Value: "Value1",
+				},
+				"Attr2": Attribute{
+					Type:  Integer,
+					Value: int64(2),
+				},
+				"Attr3": Attribute{
+					Type:  Real,
+					Value: 3.4,
+				},
+			},
+		},
+		{
+			"Empty case",
+			make(map[string]string),
+			ClassAd{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			if result := MapStringStringToClassAd(tc.m); !reflect.DeepEqual(result, tc.expected) {
+				t.Errorf("expected %v classad, got %v", tc.expected, result)
+			}
+		})
 	}
 }
 
